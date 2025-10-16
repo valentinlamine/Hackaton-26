@@ -319,6 +319,11 @@ export class PhotoService {
 
   private async getCurrentLocation(): Promise<{latitude: number, longitude: number, altitude?: number} | null> {
     try {
+      // DEBUG MODE: Simulate different locations for testing
+      if (this.isDebugMode()) {
+        return this.getRandomTestLocation();
+      }
+
       if (Capacitor.getPlatform() === 'web') {
         // For web, try to get location using browser geolocation
         return new Promise((resolve) => {
@@ -359,5 +364,55 @@ export class PhotoService {
       console.warn('[Geolocation] Error getting location:', e);
       return null;
     }
+  }
+
+  // DEBUG: Check if debug mode is enabled
+  private isDebugMode(): boolean {
+    // Enable debug mode by adding ?debug=true to URL or setting localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const debugParam = urlParams.get('debug');
+    const debugStorage = localStorage.getItem('photo-debug-mode');
+    return debugParam === 'true' || debugStorage === 'true';
+  }
+
+  // DEBUG: Get random test locations around Aix-en-Provence
+  private getRandomTestLocation(): {latitude: number, longitude: number, altitude?: number} {
+    const testLocations = [
+      // Aix-en-Provence center
+      { latitude: 43.5297, longitude: 5.4474, altitude: 150 },
+      // Aix-en-Provence - Cours Mirabeau
+      { latitude: 43.5267, longitude: 5.4444, altitude: 145 },
+      // Aix-en-Provence - Parc Jourdan
+      { latitude: 43.5317, longitude: 5.4414, altitude: 155 },
+      // Marseille - Vieux Port
+      { latitude: 43.2951, longitude: 5.3761, altitude: 10 },
+      // Marseille - Notre-Dame de la Garde
+      { latitude: 43.2841, longitude: 5.3711, altitude: 150 },
+      // Nice - Promenade des Anglais
+      { latitude: 43.6959, longitude: 7.2644, altitude: 5 },
+      // Cannes - Croisette
+      { latitude: 43.5528, longitude: 7.0174, altitude: 8 },
+      // Avignon - Palais des Papes
+      { latitude: 43.9493, longitude: 4.8055, altitude: 20 },
+      // Arles - Amphithéâtre
+      { latitude: 43.6766, longitude: 4.6277, altitude: 15 },
+      // Nîmes - Arènes
+      { latitude: 43.8367, longitude: 4.3601, altitude: 40 }
+    ];
+
+    const randomIndex = Math.floor(Math.random() * testLocations.length);
+    const location = testLocations[randomIndex];
+    
+    // Add small random offset to create clusters
+    const offsetLat = (Math.random() - 0.5) * 0.01; // ~500m max offset
+    const offsetLng = (Math.random() - 0.5) * 0.01;
+    
+    console.log('[PhotoService] DEBUG: Using fake location:', location);
+    
+    return {
+      latitude: location.latitude + offsetLat,
+      longitude: location.longitude + offsetLng,
+      altitude: location.altitude + (Math.random() - 0.5) * 20
+    };
   }
 }

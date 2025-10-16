@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton, IonIcon, IonButtons, IonButton, IonCheckbox, IonModal } from '@ionic/angular/standalone';
@@ -12,7 +12,7 @@ import { PhotoService, PhotoMetadata } from '../services/photo';
   styleUrls: ['tab1.page.scss'],
   imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton, IonIcon, IonButtons, IonButton, IonCheckbox, IonModal],
 })
-export class Tab1Page implements OnInit, ViewWillEnter {
+export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
   selectionMode = false;
   selectedFilepaths = new Set<string>();
   viewerOpen = false;
@@ -43,6 +43,9 @@ export class Tab1Page implements OnInit, ViewWillEnter {
 
   async ngOnInit(): Promise<void> {
     await this.photoService.loadSaved();
+    // Request motion permissions and add shake detection
+    await this.requestMotionPermissions();
+    this.addShakeListener();
   }
 
   ionViewWillEnter(): void {
@@ -432,5 +435,130 @@ export class Tab1Page implements OnInit, ViewWillEnter {
       return 'Calcul en cours...';
     }
     return '';
+  }
+
+  // DEBUG: Check if debug mode is enabled
+  isDebugMode(): boolean {
+    const urlParams = new URLSearchParams(window.location.search);
+    const debugParam = urlParams.get('debug');
+    const debugStorage = localStorage.getItem('photo-debug-mode');
+    return debugParam === 'true' || debugStorage === 'true';
+  }
+
+  // DEBUG: Shake gesture to toggle debug mode
+  private shakeThreshold = 25; // Much higher threshold for shake (was 15)
+  private shakeTimeout: any = null;
+  private lastShakeTime = 0;
+  private shakeCount = 0; // Count consecutive shakes
+  private requiredShakes = 3; // Need 3 strong shakes
+  private shakeWindow = 3000; // 3 seconds window for multiple shakes
+
+
+  private async requestMotionPermissions(): Promise<void> {
+    // Request permission for device motion (iOS 13+)
+    if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
+      try {
+        const permission = await (DeviceMotionEvent as any).requestPermission();
+        if (permission === 'granted') {
+          console.log('[Tab1] Motion permissions granted');
+        } else {
+          console.log('[Tab1] Motion permissions denied');
+        }
+      } catch (error) {
+        console.log('[Tab1] Error requesting motion permissions:', error);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Remove shake detection
+    this.removeShakeListener();
+  }
+
+  private addShakeListener(): void {
+    if (window.DeviceMotionEvent) {
+      window.addEventListener('devicemotion', this.onDeviceMotion.bind(this));
+    }
+  }
+
+  private removeShakeListener(): void {
+    if (window.DeviceMotionEvent) {
+      window.removeEventListener('devicemotion', this.onDeviceMotion.bind(this));
+    }
+  }
+
+  private onDeviceMotion(event: DeviceMotionEvent): void {
+    const acceleration = event.accelerationIncludingGravity;
+    if (!acceleration) return;
+
+    const x = acceleration.x || 0;
+    const y = acceleration.y || 0;
+    const z = acceleration.z || 0;
+
+    const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
+    const currentTime = Date.now();
+
+    // Check if it's a strong shake
+    if (accelerationMagnitude > this.shakeThreshold) {
+      // Reset counter if too much time has passed
+      if (currentTime - this.lastShakeTime > this.shakeWindow) {
+        this.shakeCount = 0;
+      }
+      
+      // Only count if enough time has passed since last shake
+      if (currentTime - this.lastShakeTime > 500) { // 500ms between shakes
+        this.shakeCount++;
+        this.lastShakeTime = currentTime;
+        
+        console.log(`[Tab1] Shake detected (${this.shakeCount}/${this.requiredShakes})`);
+        
+        // Show visual feedback for each shake
+        this.showShakeFeedback();
+        
+        // Check if we have enough shakes
+        if (this.shakeCount >= this.requiredShakes) {
+          this.onShakeDetected();
+          this.shakeCount = 0; // Reset counter
+        }
+      }
+    }
+  }
+
+  private onShakeDetected(): void {
+    console.log('[Tab1] Shake detected - toggling debug mode');
+    
+    // Add visual feedback
+    this.showShakeFeedback();
+    
+    // Toggle debug mode
+    this.toggleDebugMode();
+  }
+
+  private showShakeFeedback(): void {
+    // Add visual feedback to the entire header
+    const header = document.querySelector('.main-header ion-toolbar');
+    if (header) {
+      header.classList.add('shake-feedback');
+      setTimeout(() => {
+        header.classList.remove('shake-feedback');
+      }, 300);
+    }
+  }
+
+  onTitleClick(): void {
+    // Keep title clickable but without triple-tap logic
+    console.log('[Tab1] Title clicked - use shake gesture for debug mode');
+  }
+
+  // DEBUG: Toggle debug mode
+  toggleDebugMode(): void {
+    const currentMode = this.isDebugMode();
+    if (currentMode) {
+      localStorage.removeItem('photo-debug-mode');
+      console.log('[Tab1] DEBUG mode disabled');
+    } else {
+      localStorage.setItem('photo-debug-mode', 'true');
+      console.log('[Tab1] DEBUG mode enabled - next photos will use fake locations');
+    }
   }
 }
