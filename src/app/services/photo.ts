@@ -131,4 +131,25 @@ export class PhotoService {
     }
     return await this.convertBlobToBase64(data);
   }
+
+  public async deletePhotos(filepaths: string[]): Promise<void> {
+    const remaining: UserPhoto[] = [];
+    for (const photo of this.photos) {
+      if (filepaths.includes(photo.filepath)) {
+        try {
+          const path = photo.filepath.startsWith('file://') ? photo.filepath.replace('file://', '') : photo.filepath;
+          await Filesystem.deleteFile({ path, directory: Directory.Data }).catch(async () => {
+            // Try without directory context
+            await Filesystem.deleteFile({ path });
+          });
+        } catch {
+          // Ignore delete failures, we will still drop it from the list
+        }
+      } else {
+        remaining.push(photo);
+      }
+    }
+    this.photos = remaining;
+    await Preferences.set({ key: 'photos', value: JSON.stringify(this.photos) });
+  }
 }

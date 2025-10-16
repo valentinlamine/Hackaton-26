@@ -1,22 +1,28 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>
-      Tab 1
-    </ion-title>
+    <ion-title>Galerie</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleSelectionMode()">{{ selectionMode ? 'Annuler' : 'Sélection' }}</ion-button>
+      <ion-button color="danger" [disabled]="!selectionMode || !selectedFilepaths.size" (click)="deleteSelected()">Supprimer</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title size="large">Tab 1</ion-title>
+      <ion-title size="large">Galerie</ion-title>
     </ion-toolbar>
   </ion-header>
 
   <ion-grid *ngIf="photoService.photos.length; else emptyState">
     <ion-row>
-      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position">
-        <ion-img [src]="photo.webviewPath"></ion-img>
+      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position" (click)="selectionMode ? toggleSelect(photo.filepath) : openViewer(position)">
+        <div class="photo-tile">
+          <ion-img [src]="photo.webviewPath" [class.dimmed]="selectionMode && !isSelected(photo.filepath)"></ion-img>
+          <ion-checkbox *ngIf="selectionMode" style="position: absolute; top: 8px; right: 8px;"
+            [checked]="isSelected(photo.filepath)"></ion-checkbox>
+        </div>
       </ion-col>
     </ion-row>
   </ion-grid>
@@ -30,5 +36,14 @@
       <ion-icon name="camera"></ion-icon>
     </ion-fab-button>
   </ion-fab>
+
+  <!-- Fullscreen viewer modal -->
+  <ion-modal [isOpen]="viewerOpen" (didDismiss)="closeViewer()">
+    <ng-template>
+      <div class="viewer">
+        <img [src]="photoService.photos[currentIndex]?.webviewPath" />
+      </div>
+    </ng-template>
+  </ion-modal>
 
 </ion-content>
