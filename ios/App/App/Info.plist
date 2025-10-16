@@ -50,6 +50,10 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Permettre à l’app d’accéder à la photothèque pour afficher/choisir des photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Permettre à l’app d’enregistrer des photos dans la photothèque.</string>
+	<string>Permettre à l'app d'enregistrer des photos dans la photothèque.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Permettre à l'app d'accéder à votre position pour géolocaliser les photos prises.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Permettre à l'app d'accéder à votre position pour géolocaliser les photos prises.</string>
 </dict>
 </plist>
