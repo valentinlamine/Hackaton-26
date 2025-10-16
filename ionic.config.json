@@ -1,0 +1,7 @@
+{
+  "name": "Hackaton",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
