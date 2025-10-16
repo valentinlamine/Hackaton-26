@@ -1,0 +1,16 @@
+.main-header {
+  z-index: 1000;
+  position: relative;
+}
+
+.main-header ion-toolbar {
+  --background: #1a1a1a;
+  --color: #ffffff;
+  --border-color: #333333;
+}
+
+.main-header ion-title {
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 18px;
+}

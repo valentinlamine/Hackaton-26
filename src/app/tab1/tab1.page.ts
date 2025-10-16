@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ViewWillEnter } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton, IonIcon, IonButtons, IonButton, IonCheckbox, IonModal } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -11,7 +12,7 @@ import { PhotoService, PhotoMetadata } from '../services/photo';
   styleUrls: ['tab1.page.scss'],
   imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton, IonIcon, IonButtons, IonButton, IonCheckbox, IonModal],
 })
-export class Tab1Page implements OnInit {
+export class Tab1Page implements OnInit, ViewWillEnter {
   selectionMode = false;
   selectedFilepaths = new Set<string>();
   viewerOpen = false;
@@ -42,6 +43,11 @@ export class Tab1Page implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.photoService.loadSaved();
+  }
+
+  ionViewWillEnter(): void {
+    // Refresh photos when entering the tab
+    this.photoService.loadSaved();
   }
 
   addPhotoToGallery(): void {
