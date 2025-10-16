@@ -13,4 +13,22 @@
     </ion-toolbar>
   </ion-header>
 
+  <ion-grid *ngIf="photoService.photos.length; else emptyState">
+    <ion-row>
+      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position">
+        <ion-img [src]="photo.webviewPath"></ion-img>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <ng-template #emptyState>
+    <div style="padding: 16px; text-align: center; opacity: 0.7;">Aucune photo pour le moment</div>
+  </ng-template>
+
+  <ion-fab vertical="bottom" horizontal="center" slot="fixed">
+    <ion-fab-button (click)="addPhotoToGallery()">
+      <ion-icon name="camera"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
 </ion-content>
