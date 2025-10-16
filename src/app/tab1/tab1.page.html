@@ -1,12 +1,16 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Galerie</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="toggleSelectionMode()">{{ selectionMode ? 'Annuler' : 'Sélection' }}</ion-button>
-      <ion-button color="danger" [disabled]="!selectionMode || !selectedFilepaths.size" (click)="deleteSelected()">Supprimer</ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
+  <ion-header [translucent]="true" class="main-header">
+    <ion-toolbar>
+      <ion-title>Galerie</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="toggleSelectionMode()" [color]="selectionMode ? 'danger' : 'primary'">
+          {{ selectionMode ? 'Annuler' : 'Sélection' }}
+        </ion-button>
+        <ion-button color="danger" [disabled]="!selectionMode || !selectedFilepaths.size" (click)="deleteSelected()">
+          Supprimer
+        </ion-button>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
 
 <ion-content [fullscreen]="true">
   <ion-header collapse="condense">
@@ -17,7 +21,9 @@
 
   <ion-grid *ngIf="photoService.photos.length; else emptyState">
     <ion-row>
-      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position" (click)="selectionMode ? toggleSelect(photo.filepath) : openViewer(position)">
+      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position" 
+               (click)="selectionMode ? toggleSelect(photo.filepath) : openViewer(position)"
+               (longpress)="!selectionMode && enterSelectionMode(photo.filepath)">
         <div class="photo-tile">
           <ion-img [src]="photo.webviewPath" [class.dimmed]="selectionMode && !isSelected(photo.filepath)"></ion-img>
           <ion-checkbox *ngIf="selectionMode" style="position: absolute; top: 8px; right: 8px;"
@@ -40,8 +46,28 @@
   <!-- Fullscreen viewer modal -->
   <ion-modal [isOpen]="viewerOpen" (didDismiss)="closeViewer()">
     <ng-template>
-      <div class="viewer">
-        <img [src]="photoService.photos[currentIndex]?.webviewPath" />
+      <div class="viewer" (click)="toggleViewerControls()">
+        <div class="viewer-header" [class.hidden]="!viewerControlsVisible">
+          <ion-button fill="clear" color="light" (click)="closeViewer()" class="viewer-btn">
+            <ion-icon name="arrow-back" size="large"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="danger" (click)="deleteCurrentPhoto()" class="viewer-btn">
+            <ion-icon name="trash" size="large"></ion-icon>
+          </ion-button>
+        </div>
+        <div class="viewer-content" 
+             (swipeleft)="nextPhoto()" 
+             (swiperight)="prevPhoto()"
+             (touchstart)="onTouchStart($event)"
+             (touchmove)="onTouchMove($event)"
+             (touchend)="onTouchEnd($event)">
+          <img [src]="photoService.photos[currentIndex]?.webviewPath" 
+               [style.transform]="'translateX(' + swipeOffset + 'px)'"
+               [style.transition]="swipeTransition" />
+        </div>
+        <div class="viewer-footer" [class.hidden]="!viewerControlsVisible">
+          <span>{{ currentIndex + 1 }} / {{ photoService.photos.length }}</span>
+        </div>
       </div>
     </ng-template>
   </ion-modal>
