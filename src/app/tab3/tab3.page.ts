@@ -1,22 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonIcon, IonButtons, IonButton, IonModal } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonIcon, IonButtons, IonButton, IonModal, IonCheckbox } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp } from 'ionicons/icons';
+import { arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, menu, checkmark } from 'ionicons/icons';
 import { PhotoService, PhotoMetadata, UserPhoto } from '../services/photo';
 
 @Component({
   selector: 'app-tab3',
   templateUrl: 'tab3.page.html',
   styleUrls: ['tab3.page.scss'],
-  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonIcon, IonButton, IonModal],
+  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonGrid, IonRow, IonCol, IonImg, IonIcon, IonButton, IonModal, IonCheckbox, IonButtons],
 })
 export class Tab3Page implements OnInit, ViewWillEnter {
   likedPhotos: UserPhoto[] = [];
   viewerOpen = false;
   currentIndex = 0;
   viewerControlsVisible = true;
+  
+  // Selection mode
+  selectionMode = false;
+  selectedFilepaths = new Set<string>();
   
   // Swipe navigation
   swipeOffset = 0;
@@ -37,7 +41,7 @@ export class Tab3Page implements OnInit, ViewWillEnter {
   private isMetadataScrollGesture = false;
 
   constructor(public photoService: PhotoService) {
-    addIcons({ arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp });
+    addIcons({ arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, menu, checkmark });
   }
 
   async ngOnInit(): Promise<void> {
@@ -52,6 +56,39 @@ export class Tab3Page implements OnInit, ViewWillEnter {
 
   updateLikedPhotos(): void {
     this.likedPhotos = this.photoService.photos.filter(photo => photo.liked);
+  }
+
+  // Selection mode methods
+  toggleSelectionMode(): void {
+    this.selectionMode = !this.selectionMode;
+    if (!this.selectionMode) {
+      this.selectedFilepaths.clear();
+    }
+  }
+
+  enterSelectionMode(filepath: string): void {
+    this.selectionMode = true;
+    this.toggleSelect(filepath);
+  }
+
+  toggleSelect(filepath: string): void {
+    if (this.selectedFilepaths.has(filepath)) {
+      this.selectedFilepaths.delete(filepath);
+    } else {
+      this.selectedFilepaths.add(filepath);
+    }
+  }
+
+  getSelectedCount(): number {
+    return this.selectedFilepaths.size;
+  }
+
+  async deleteSelected(): Promise<void> {
+    const selectedArray = Array.from(this.selectedFilepaths);
+    await this.photoService.deletePhotos(selectedArray);
+    this.selectedFilepaths.clear();
+    this.selectionMode = false;
+    this.updateLikedPhotos(); // Refresh the liked photos list
   }
 
   openViewer(index: number): void {

@@ -1,22 +1,28 @@
 <ion-header [translucent]="true" class="main-header">
   <ion-toolbar>
-    <ion-title>Liké</ion-title>
+    <ion-title>Photos aimées</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleSelectionMode()" class="header-btn" [color]="selectionMode ? 'danger' : 'primary'">
+        <ion-icon [name]="selectionMode ? 'checkmark' : 'menu'" size="large"></ion-icon>
+      </ion-button>
+      <ion-button color="danger" [disabled]="!selectionMode || !getSelectedCount()" (click)="deleteSelected()" class="header-btn">
+        <ion-icon name="trash" size="large"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Photos aimées</ion-title>
-    </ion-toolbar>
-  </ion-header>
 
   <ion-grid *ngIf="likedPhotos.length; else emptyState">
     <ion-row>
       <ion-col size="6" *ngFor="let photo of likedPhotos; index as position" 
-               (click)="openViewer(position)">
+               (click)="selectionMode ? toggleSelect(photo.filepath) : openViewer(position)"
+               (longpress)="!selectionMode && enterSelectionMode(photo.filepath)">
         <div class="photo-tile">
-          <ion-img [src]="photo.webviewPath"></ion-img>
+          <ion-img [src]="photo.webviewPath" [class.dimmed]="selectionMode && !selectedFilepaths.has(photo.filepath)"></ion-img>
+          <ion-checkbox *ngIf="selectionMode" style="position: absolute; top: 8px; right: 8px;"
+            [checked]="selectedFilepaths.has(photo.filepath)"></ion-checkbox>
         </div>
       </ion-col>
     </ion-row>

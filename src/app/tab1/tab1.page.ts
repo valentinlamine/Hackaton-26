@@ -22,7 +22,6 @@ import { PhotoViewerComponent } from '../components/photo-viewer/photo-viewer.co
   ],
 })
 export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
-  headerVisible = false;
 
   constructor(
     public photoService: PhotoService,
@@ -56,20 +55,6 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
     console.log('[Tab1] Title clicked - use shake gesture for debug mode');
   }
 
-  // Handle scroll to show/hide header
-  onScroll(event: any): void {
-    let scrollTop = 0;
-    
-    // Handle different event types
-    if (event.detail && event.detail.scrollTop !== undefined) {
-      scrollTop = event.detail.scrollTop;
-    } else if (event.target && event.target.scrollTop !== undefined) {
-      scrollTop = event.target.scrollTop;
-    }
-    
-    console.log('[Tab1] Scroll detected:', scrollTop); // Debug log
-    this.headerVisible = scrollTop > 20; // Show title after 20px scroll
-  }
 
   // Photo actions
   async addPhotoToGallery(): Promise<void> {
