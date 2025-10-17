@@ -2,41 +2,27 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton } from '@ionic/angular/standalone';
+import { PhotoViewerComponent } from '../components/photo-viewer/photo-viewer.component';
 import { addIcons } from 'ionicons';
 import { arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close, locate } from 'ionicons/icons';
 import { PhotoService, UserPhoto, PhotoMetadata } from '../services/photo';
 import { MapService } from '../services/map.service';
+import { MapStateService } from '../services/map-state.service';
 
 @Component({
   selector: 'app-tab2',
   templateUrl: 'tab2.page.html',
   styleUrls: ['tab2.page.scss'],
-  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton]
+  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton, PhotoViewerComponent]
 })
 export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
   isLoading = true;
-  viewerOpen = false;
-  photosListOpen = false;
-  currentIndex = 0;
-  viewerControlsVisible = true;
-  photosToShow: UserPhoto[] = [];
   selectionMode = false;
   
-  // Swipe navigation
-  swipeOffset = 0;
-  swipeTransition = 'none';
+  // Touch handling properties
   touchStartX = 0;
   touchStartY = 0;
   isSwipeGesture = false;
-  
-  // Vertical scroll for metadata
-  verticalOffset = 0;
-  verticalTransition = 'none';
-  metadataVisible = false;
-  metadataOffset = 0;
-  metadataTransition = 'none';
-  verticalTouchStartY = 0;
-  isVerticalGesture = false;
   private metadataScrollStartY = 0;
   private isMetadataScrollGesture = false;
 
@@ -44,7 +30,8 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
 
   constructor(
     public photoService: PhotoService,
-    private mapService: MapService
+    private mapService: MapService,
+    public mapState: MapStateService
   ) {
     addIcons({ arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close, locate });
   }
@@ -61,6 +48,7 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
 
   ngOnDestroy(): void {
     this.mapService.destroy();
+    this.mapState.reset();
   }
 
   private async initializeMap(): Promise<void> {
@@ -106,22 +94,16 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
       try {
         photos = JSON.parse(photos);
       } catch (e) {
-        console.error('[Tab2] Error parsing photos JSON:', e);
+        console.error('Error parsing cluster photos:', e);
         photos = [];
       }
     }
     
-    // Set photos to show from cluster
-    this.photosToShow = photos;
-    console.log('[Tab2] Photos to show:', this.photosToShow.length);
-    console.log('[Tab2] Photos to show data:', this.photosToShow);
+    console.log('[Tab2] Parsed photos:', photos);
+    console.log('[Tab2] Photos to show:', photos.length);
     
-    if (this.photosToShow.length > 0) {
-      this.photosListOpen = true; // Open photos list modal
-      console.log('[Tab2] Opening photos list modal');
-    } else {
-      console.log('[Tab2] No photos to show, not opening modal');
-    }
+    // Open photos list
+    this.mapState.openPhotosList(photos);
   }
 
   private onMarkerClick(marker: any): void {
@@ -134,349 +116,177 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
       try {
         photo = JSON.parse(photo);
       } catch (e) {
-        console.error('[Tab2] Error parsing photo JSON:', e);
+        console.error('Error parsing marker photo:', e);
         return;
       }
     }
     
-    // Set photos to show from marker
-    this.photosToShow = [photo];
-    console.log('[Tab2] Photos to show (marker):', this.photosToShow.length);
-    console.log('[Tab2] Photo data:', this.photosToShow[0]);
+    console.log('[Tab2] Parsed photo:', photo);
     
-    if (this.photosToShow.length > 0) {
-      this.openViewer(0); // Open the single photo directly
-      console.log('[Tab2] Opening viewer for single photo');
-    } else {
-      console.log('[Tab2] No photo to show, not opening viewer');
-    }
+    // Open viewer directly for single photo
+    this.mapState.openViewer([photo], 0);
   }
 
-  // Viewer methods (copied from Tab1 and Tab3)
-  openViewer(index: number): void {
-    this.currentIndex = index;
-    this.viewerOpen = true;
-    this.viewerControlsVisible = true;
-    this.resetSwipeState();
-    this.resetVerticalState();
-  }
-
-  closeViewer(): void {
-    this.viewerOpen = false;
-  }
-
+  // Photos list modal methods
   closePhotosList(): void {
-    this.photosListOpen = false;
+    this.mapState.closePhotosList();
   }
 
-  toggleViewerControls(): void {
-    this.viewerControlsVisible = !this.viewerControlsVisible;
+  openViewer(index: number): void {
+    // Open viewer from photos list
+    this.mapState.openViewer(this.mapState.photosListPhotos, index);
+  }
+
+  // Viewer methods
+  closeViewer(): void {
+    this.mapState.closeViewer();
   }
 
   onViewerClick(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.viewer-header') && !target.closest('.viewer-footer') && !target.closest('.viewer-actions')) {
-      this.toggleViewerControls();
-    }
+    // This will be handled by the photo-viewer component
   }
 
   // Navigation methods
   nextPhoto(): void {
-    if (this.currentIndex < this.photosToShow.length - 1) {
-      this.currentIndex++;
-      this.resetSwipeState();
-    }
+    this.mapState.nextPhoto();
   }
 
   prevPhoto(): void {
-    if (this.currentIndex > 0) {
-      this.currentIndex--;
-      this.resetSwipeState();
+    this.mapState.prevPhoto();
+  }
+
+  // Touch handling methods
+  onTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.isSwipeGesture = false;
     }
   }
 
-  canSwipeLeft(): boolean {
-    return this.currentIndex < this.photosToShow.length - 1;
-  }
-
-  canSwipeRight(): boolean {
-    return this.currentIndex > 0;
-  }
-
-  resetSwipeState(): void {
-    this.swipeOffset = 0;
-    this.swipeTransition = 'none';
-    this.isSwipeGesture = false;
-  }
-
-  resetVerticalState(): void {
-    this.verticalOffset = 0;
-    this.verticalTransition = 'none';
-    this.metadataVisible = false;
-    this.metadataOffset = 0;
-    this.metadataTransition = 'none';
-    this.isVerticalGesture = false;
-  }
-
-  // Touch handlers for swipe
-  onTouchStart(event: TouchEvent): void {
-    this.touchStartX = event.touches[0].clientX;
-    this.touchStartY = event.touches[0].clientY;
-    this.isSwipeGesture = false;
-    this.swipeTransition = 'none';
-  }
-
   onTouchMove(event: TouchEvent): void {
-    if (!this.touchStartX) return;
-    
-    const currentX = event.touches[0].clientX;
-    const currentY = event.touches[0].clientY;
-    const deltaX = currentX - this.touchStartX;
-    const deltaY = currentY - this.touchStartY;
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      this.isSwipeGesture = true;
+    if (event.touches.length === 1 && !this.isSwipeGesture) {
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - this.touchStartX;
+      const deltaY = touch.clientY - this.touchStartY;
       
-      if (deltaX > 0 && !this.canSwipeRight()) {
-        this.swipeOffset = 0;
-      } else if (deltaX < 0 && !this.canSwipeLeft()) {
-        this.swipeOffset = 0;
-      } else {
-        this.swipeOffset = deltaX;
+      // Determine if this is a horizontal swipe
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        this.isSwipeGesture = true;
+        this.mapState.setSwipeOffset(deltaX);
+        this.mapState.setSwipeTransition('none');
       }
     }
   }
 
   onTouchEnd(event: TouchEvent): void {
-    if (!this.isSwipeGesture) return;
-    
-    const deltaX = this.swipeOffset;
-    const threshold = 100;
-    
-    this.swipeTransition = 'transform 0.3s ease-out';
-    
-    if (Math.abs(deltaX) > threshold) {
-      if (deltaX > 0) {
-        this.prevPhoto();
-      } else {
-        this.nextPhoto();
-      }
-    } else {
-      this.swipeOffset = 0;
-    }
-    
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-  }
-
-  // Metadata panel methods
-  onVerticalTouchStart(event: TouchEvent): void {
-    if (this.metadataVisible) {
-      const target = event.target as HTMLElement;
-      if (target.closest('.metadata-panel')) {
-        return;
-      }
-    }
-    
-    this.verticalTouchStartY = event.touches[0].clientY;
-    this.isVerticalGesture = false;
-    this.verticalTransition = 'none';
-    this.metadataTransition = 'none';
-  }
-
-  onVerticalTouchMove(event: TouchEvent): void {
-    if (!this.verticalTouchStartY) return;
-    
-    if (this.metadataVisible) {
-      const target = event.target as HTMLElement;
-      if (target.closest('.metadata-panel')) {
-        return;
-      }
-    }
-    
-    const currentY = event.touches[0].clientY;
-    const deltaY = currentY - this.verticalTouchStartY;
-    
-    if (deltaY < -10 && !this.metadataVisible) {
-      this.isVerticalGesture = true;
-      const maxOffset = -200;
-      const offset = Math.max(deltaY, maxOffset);
+    if (this.isSwipeGesture) {
+      const deltaX = this.mapState.viewerSwipeOffset;
+      const threshold = 100;
       
-      this.verticalOffset = offset;
-      this.metadataOffset = Math.max(0, -offset - 200);
-    }
-    else if (deltaY > 10 && this.metadataVisible) {
-      this.isVerticalGesture = true;
-      const maxOffset = 200;
-      const offset = Math.min(deltaY, maxOffset);
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX > 0 && this.mapState.canSwipeRight()) {
+          // Swipe right - previous photo
+          this.mapState.setSwipeTransition('transform 0.3s ease-out');
+          this.mapState.setSwipeOffset(window.innerWidth);
+          setTimeout(() => {
+            this.prevPhoto();
+            this.mapState.setSwipeOffset(0);
+            this.mapState.setSwipeTransition('none');
+          }, 300);
+        } else if (deltaX < 0 && this.mapState.canSwipeLeft()) {
+          // Swipe left - next photo
+          this.mapState.setSwipeTransition('transform 0.3s ease-out');
+          this.mapState.setSwipeOffset(-window.innerWidth);
+          setTimeout(() => {
+            this.nextPhoto();
+            this.mapState.setSwipeOffset(0);
+            this.mapState.setSwipeTransition('none');
+          }, 300);
+        } else {
+          // Snap back
+          this.mapState.setSwipeTransition('transform 0.3s ease-out');
+          this.mapState.setSwipeOffset(0);
+        }
+      } else {
+        // Snap back
+        this.mapState.setSwipeTransition('transform 0.3s ease-out');
+        this.mapState.setSwipeOffset(0);
+      }
       
-      this.verticalOffset = -200 + offset;
-      this.metadataOffset = Math.max(0, -offset);
+      this.isSwipeGesture = false;
     }
-  }
-
-  onVerticalTouchEnd(event: TouchEvent): void {
-    if (!this.isVerticalGesture) return;
-    
-    const deltaY = this.verticalOffset;
-    
-    this.verticalTransition = 'transform 0.3s ease-out';
-    this.metadataTransition = 'transform 0.3s ease-out';
-    
-    if (this.metadataVisible) {
-      if (deltaY > -100) {
-        this.verticalOffset = 0;
-        this.metadataOffset = 200;
-        this.metadataVisible = false;
-      } else {
-        this.verticalOffset = -200;
-        this.metadataOffset = 0;
-      }
-    } else {
-      if (deltaY < -100) {
-        this.verticalOffset = -200;
-        this.metadataOffset = 0;
-        this.metadataVisible = true;
-      } else {
-        this.verticalOffset = 0;
-        this.metadataOffset = 200;
-      }
-    }
-    
-    this.verticalTouchStartY = 0;
   }
 
   onMetadataTouchStart(event: TouchEvent): void {
-    this.metadataScrollStartY = event.touches[0].clientY;
-    this.isMetadataScrollGesture = false;
-  }
-
-  private isAtTopOfMetadataContent(): boolean {
-    const metadataPanel = document.querySelector('.metadata-panel');
-    if (!metadataPanel) return false;
-    return metadataPanel.scrollTop <= 5;
+    if (event.touches.length === 1) {
+      this.metadataScrollStartY = event.touches[0].clientY;
+      this.isMetadataScrollGesture = false;
+    }
   }
 
   onMetadataTouchMove(event: TouchEvent): void {
-    const currentY = event.touches[0].clientY;
-    const deltaY = currentY - this.metadataScrollStartY;
-    
-    if (this.isAtTopOfMetadataContent() && deltaY > 25) {
-      this.isMetadataScrollGesture = true;
-      event.preventDefault();
+    if (event.touches.length === 1) {
+      const touch = event.touches[0];
+      const deltaY = touch.clientY - this.metadataScrollStartY;
+      
+      // Only handle if we're dragging the handle or header
+      const target = event.target as HTMLElement;
+      if (target.closest('.metadata-handle') || target.closest('.metadata-header')) {
+        this.isMetadataScrollGesture = true;
+        this.mapState.setMetadataOffset(Math.max(0, deltaY));
+        this.mapState.setMetadataTransition('none');
+      }
     }
   }
 
   onMetadataTouchEnd(event: TouchEvent): void {
     if (this.isMetadataScrollGesture) {
-      const currentY = event.changedTouches[0].clientY;
-      const deltaY = currentY - this.metadataScrollStartY;
+      const deltaY = this.mapState.viewerMetadataOffset;
+      const threshold = 50;
       
-      if (this.isAtTopOfMetadataContent() && deltaY > 60) {
-        this.closeMetadataPanel();
+      if (deltaY > threshold) {
+        // Hide metadata
+        this.mapState.setMetadataVisible(false);
+        this.mapState.setMetadataOffset(0);
+        this.mapState.setMetadataTransition('transform 0.3s ease-out');
+      } else {
+        // Snap back
+        this.mapState.setMetadataOffset(0);
+        this.mapState.setMetadataTransition('transform 0.3s ease-out');
       }
+      
+      this.isMetadataScrollGesture = false;
     }
-    
-    this.isMetadataScrollGesture = false;
-    this.metadataScrollStartY = 0;
-  }
-
-  closeMetadataPanel(): void {
-    this.metadataVisible = false;
-    this.verticalOffset = 0;
-    this.metadataOffset = 200;
-    this.verticalTransition = 'transform 0.3s ease-out';
-    this.metadataTransition = 'transform 0.3s ease-out';
   }
 
   // Photo actions
-  async deleteCurrentPhoto(): Promise<void> {
-    if (this.photosToShow[this.currentIndex]) {
-      const filepath = this.photosToShow[this.currentIndex].filepath;
-      await this.photoService.deletePhotos([filepath]);
-      
-      this.photosToShow = this.photosToShow.filter(p => p.filepath !== filepath);
-      
-      if (this.currentIndex >= this.photosToShow.length) {
-        this.currentIndex = Math.max(0, this.photosToShow.length - 1);
-      }
-      
-      this.viewerControlsVisible = true;
-      
-      if (this.photosToShow.length === 0) {
-        this.closeViewer();
-      }
-    }
-  }
-
-  async toggleLike(filepath: string, event?: Event): Promise<void> {
-    if (event) {
-      event.stopPropagation();
-    }
-    await this.photoService.toggleLike(filepath);
-    
-    if (this.viewerOpen) {
-      this.viewerControlsVisible = true;
-    }
+  toggleLike(filepath: string): void {
+    this.photoService.toggleLike(filepath);
   }
 
   isLiked(filepath: string): boolean {
-    const photo = this.photoService.photos.find(p => p.filepath === filepath);
-    return photo?.liked || false;
+    return this.photoService.isLiked(filepath);
   }
 
-  // Metadata display methods
-  getPhotoDate(filepath: string): string {
-    const filename = filepath.split('/').pop() || '';
-    const timestamp = filename.split('.')[0];
-    const date = new Date(parseInt(timestamp));
-    
-    if (isNaN(date.getTime())) {
-      return 'Date inconnue';
-    }
-    
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
+  async deleteCurrentPhoto(): Promise<void> {
+    const currentPhoto = this.mapState.getCurrentPhoto();
+    if (currentPhoto) {
+      await this.photoService.deletePhotos([currentPhoto.filepath]);
 
-  getDeviceModel(metadata?: PhotoMetadata): string {
-    return metadata?.deviceModel || 'Appareil inconnu';
-  }
-
-  getPhotoResolution(metadata?: PhotoMetadata): string {
-    if (metadata?.width && metadata?.height) {
-      return `${metadata.width} x ${metadata.height}`;
+      // Remove from current photos list
+      const updatedPhotos = this.mapState.viewerPhotos.filter(p => p.filepath !== currentPhoto.filepath);
+      
+      if (updatedPhotos.length === 0) {
+        // No more photos, close everything
+        this.mapState.closeViewer();
+        this.mapState.closePhotosList();
+      } else {
+        // Update the viewer with remaining photos
+        const newIndex = Math.min(this.mapState.viewerCurrentIndex, updatedPhotos.length - 1);
+        this.mapState.openViewer(updatedPhotos, newIndex);
+      }
     }
-    return '';
-  }
-
-  hasLocationData(metadata?: PhotoMetadata): boolean {
-    return !!(metadata?.latitude && metadata?.longitude) || 
-           (metadata?.latitude === undefined && metadata?.longitude === undefined);
-  }
-
-  getGPSCoordinates(metadata?: PhotoMetadata): string {
-    if (metadata?.latitude && metadata?.longitude) {
-      return `${metadata.latitude.toFixed(6)}, ${metadata.longitude.toFixed(6)}`;
-    }
-    if (metadata?.latitude === undefined && metadata?.longitude === undefined) {
-      return 'Calcul en cours...';
-    }
-    return 'Non disponible';
-  }
-
-  getAltitude(metadata?: PhotoMetadata): string {
-    if (metadata?.altitude) {
-      return `${metadata.altitude.toFixed(1)} m`;
-    }
-    if (metadata?.latitude === undefined && metadata?.longitude === undefined) {
-      return 'Calcul en cours...';
-    }
-    return '';
   }
 }
