@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ViewWillEnter } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close } from 'ionicons/icons';
+import { arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close, locate } from 'ionicons/icons';
 import { PhotoService, UserPhoto, PhotoMetadata } from '../services/photo';
 import { MapService } from '../services/map.service';
 
@@ -11,7 +11,7 @@ import { MapService } from '../services/map.service';
   selector: 'app-tab2',
   templateUrl: 'tab2.page.html',
   styleUrls: ['tab2.page.scss'],
-  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg]
+  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonIcon, IonSpinner, IonButton, IonModal, IonButtons, IonGrid, IonRow, IonCol, IonImg, IonFab, IonFabButton]
 })
 export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
   isLoading = true;
@@ -46,7 +46,7 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
     public photoService: PhotoService,
     private mapService: MapService
   ) {
-    addIcons({ arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close });
+    addIcons({ arrowBack, trash, heart, heartOutline, calendar, camera, settings, location, arrowUp, close, locate });
   }
 
   async ngOnInit(): Promise<void> {
@@ -82,6 +82,15 @@ export class Tab2Page implements OnInit, ViewWillEnter, OnDestroy {
     } catch (error) {
       console.error('Error initializing map:', error);
       this.isLoading = false;
+    }
+  }
+
+  // Center map on user location
+  async centerOnUserLocation(): Promise<void> {
+    try {
+      await this.mapService.centerOnUserLocation();
+    } catch (error) {
+      console.error('Error centering map on user location:', error);
     }
   }
 

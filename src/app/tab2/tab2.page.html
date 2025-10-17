@@ -2,6 +2,13 @@
   <!-- Map container -->
   <div id="map-container" class="map-container">
     <div id="map" class="map"></div>
+    
+    <!-- Center on user location button -->
+    <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+      <ion-fab-button (click)="centerOnUserLocation()" color="primary">
+        <ion-icon name="locate"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
   </div>
 
   <!-- Loading indicator -->

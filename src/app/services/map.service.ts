@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { PhotoService, UserPhoto } from './photo';
+import { Geolocation } from '@capacitor/geolocation';
 
 export interface MapCluster {
   id: string;
@@ -26,8 +27,65 @@ export class MapService {
   private markers: MapMarker[] = [];
   private readonly MIN_DISTANCE = 50; // 50m minimum distance between markers
   private readonly CLUSTER_RADIUS = 100; // 100m radius for clustering (increased for better grouping)
+  private userLocation: { latitude: number; longitude: number } | null = null;
 
   constructor(private photoService: PhotoService) {}
+
+  // Get user location with caching
+  async getUserLocation(): Promise<{ latitude: number; longitude: number } | null> {
+    // Return cached location if available
+    if (this.userLocation) {
+      return this.userLocation;
+    }
+
+    try {
+      // Check if location is cached in localStorage
+      const cachedLocation = localStorage.getItem('userLocation');
+      if (cachedLocation) {
+        const location = JSON.parse(cachedLocation);
+        // Check if cache is less than 1 hour old
+        if (Date.now() - location.timestamp < 3600000) {
+          this.userLocation = { latitude: location.latitude, longitude: location.longitude };
+          return this.userLocation;
+        }
+      }
+
+      // Get current location
+      const coordinates = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      });
+
+      const location = {
+        latitude: coordinates.coords.latitude,
+        longitude: coordinates.coords.longitude
+      };
+
+      // Cache the location
+      this.userLocation = location;
+      localStorage.setItem('userLocation', JSON.stringify({
+        ...location,
+        timestamp: Date.now()
+      }));
+
+      return location;
+    } catch (error) {
+      console.warn('Could not get user location:', error);
+      return null;
+    }
+  }
+
+  // Center map on user location
+  async centerMapOnUserLocation(): Promise<void> {
+    if (!this.map) return;
+
+    const location = await this.getUserLocation();
+    if (location) {
+      this.map.setCenter([location.longitude, location.latitude]);
+      this.map.setZoom(12); // Zoom level for city view
+    }
+  }
 
   initializeMap(container: string, token: string): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -38,11 +96,13 @@ export class MapService {
         this.map = new mapboxgl.default.Map({
           container: container,
           style: 'mapbox://styles/mapbox/dark-v11', // Dark style
-          center: [5.3698, 43.2965], // Aix-en-Provence center
+          center: [5.3698, 43.2965], // Aix-en-Provence center (fallback)
           zoom: 10
         });
 
-        this.map.on('load', () => {
+        this.map.on('load', async () => {
+          // Try to center on user location
+          await this.centerMapOnUserLocation();
           resolve(this.map);
         });
 
@@ -347,6 +407,11 @@ export class MapService {
 
   getMap(): any {
     return this.map;
+  }
+
+  // Public method to center map on user location
+  async centerOnUserLocation(): Promise<void> {
+    await this.centerMapOnUserLocation();
   }
 
   destroy(): void {
