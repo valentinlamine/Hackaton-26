@@ -1,0 +1,21 @@
+<ion-grid *ngIf="photos.length; else emptyState">
+  <ion-row>
+    <ion-col size="6" *ngFor="let photo of photos; index as position" 
+             (click)="selectionMode ? onToggleSelect(photo.filepath) : onPhotoClick(position)"
+             (longpress)="!selectionMode && onPhotoLongPress(photo.filepath)">
+      <div class="photo-tile">
+        <ion-img [src]="photo.webviewPath" [class.dimmed]="selectionMode && !isSelected(photo.filepath)"></ion-img>
+        <ion-checkbox *ngIf="selectionMode" style="position: absolute; top: 8px; right: 8px;"
+          [checked]="isSelected(photo.filepath)"></ion-checkbox>
+        <ion-button *ngIf="!selectionMode" fill="clear" class="like-btn" (click)="onToggleLike(photo.filepath, $event)">
+          <ion-icon [name]="isLiked(photo.filepath) ? 'heart' : 'heart-outline'" 
+                    [color]="isLiked(photo.filepath) ? 'danger' : 'light'"></ion-icon>
+        </ion-button>
+      </div>
+    </ion-col>
+  </ion-row>
+</ion-grid>
+
+<ng-template #emptyState>
+  <div style="padding: 16px; text-align: center; opacity: 0.7;">Aucune photo pour le moment</div>
+</ng-template>

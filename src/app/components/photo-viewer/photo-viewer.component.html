@@ -1,0 +1,108 @@
+<ion-modal [isOpen]="isOpen" (didDismiss)="onClose()">
+  <ng-template>
+    <div class="viewer" 
+         (click)="onViewerClick($event)"
+         (touchstart)="onVerticalTouchStart($event)"
+         (touchmove)="onVerticalTouchMove($event)"
+         (touchend)="onVerticalTouchEnd($event)">
+      
+      <div class="viewer-header" [class.hidden]="!viewerControlsVisible">
+        <ion-button fill="clear" color="light" (click)="onClose()" class="viewer-btn">
+          <ion-icon name="arrow-back" size="large"></ion-icon>
+        </ion-button>
+        <div class="viewer-actions">
+          <ion-button fill="clear" color="light" (click)="onToggleLike(getCurrentPhoto()?.filepath || '')" class="viewer-btn">
+            <ion-icon [name]="isLiked(getCurrentPhoto()?.filepath || '') ? 'heart' : 'heart-outline'" 
+                      [color]="isLiked(getCurrentPhoto()?.filepath || '') ? 'danger' : 'light'" size="large"></ion-icon>
+          </ion-button>
+          <ion-button fill="clear" color="danger" (click)="onDeleteCurrent()" class="viewer-btn">
+            <ion-icon name="trash" size="large"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="viewer-content" 
+           (swipeleft)="onNextPhoto()" 
+           (swiperight)="onPrevPhoto()"
+           (touchstart)="onTouchStart($event)"
+           (touchmove)="onTouchMove($event)"
+           (touchend)="onTouchEnd($event)">
+        <img [src]="getCurrentPhoto()?.webviewPath" 
+             [style.transform]="'translateX(' + swipeOffset + 'px)'"
+             [style.transition]="swipeTransition" />
+      </div>
+
+      <div class="viewer-footer" [class.hidden]="!viewerControlsVisible">
+        <span class="photo-counter">{{ currentIndex + 1 }} / {{ photos.length }}</span>
+      </div>
+
+      <!-- Metadata panel that slides up -->
+      <div class="metadata-panel" 
+           [class.visible]="metadataVisible"
+           [style.transform]="'translateY(' + metadataOffset + 'px)'"
+           [style.transition]="metadataTransition"
+           (touchstart)="onMetadataTouchStart($event)"
+           (touchmove)="onMetadataTouchMove($event)"
+           (touchend)="onMetadataTouchEnd($event)">
+        <div class="metadata-header">
+          <div class="metadata-handle"></div>
+        </div>
+        <div class="metadata-content" *ngIf="getCurrentPhoto()">
+          <div class="metadata-section">
+            <h3>Informations</h3>
+            <div class="metadata-item">
+              <ion-icon name="calendar"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Date de prise</span>
+                <span class="value">{{ getPhotoDate(getCurrentPhoto()?.filepath || '') }}</span>
+              </div>
+            </div>
+            <div class="metadata-item">
+              <ion-icon name="heart" [color]="isLiked(getCurrentPhoto()?.filepath || '') ? 'danger' : 'medium'"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Statut</span>
+                <span class="value">{{ isLiked(getCurrentPhoto()?.filepath || '') ? 'Aimée' : 'Non aimée' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metadata-section">
+            <h3>Appareil</h3>
+            <div class="metadata-item">
+              <ion-icon name="camera"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Appareil</span>
+                <span class="value">{{ getDeviceModel(getCurrentPhoto()?.metadata) }}</span>
+              </div>
+            </div>
+            <div class="metadata-item" *ngIf="getPhotoResolution(getCurrentPhoto()?.metadata)">
+              <ion-icon name="settings"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Résolution</span>
+                <span class="value">{{ getPhotoResolution(getCurrentPhoto()?.metadata) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="metadata-section" *ngIf="hasLocationData(getCurrentPhoto()?.metadata)">
+            <h3>Localisation</h3>
+            <div class="metadata-item">
+              <ion-icon name="location"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Coordonnées GPS</span>
+                <span class="value">{{ getGPSCoordinates(getCurrentPhoto()?.metadata) }}</span>
+              </div>
+            </div>
+            <div class="metadata-item" *ngIf="getAltitude(getCurrentPhoto()?.metadata)">
+              <ion-icon name="arrow-up"></ion-icon>
+              <div class="metadata-text">
+                <span class="label">Altitude</span>
+                <span class="value">{{ getAltitude(getCurrentPhoto()?.metadata) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>

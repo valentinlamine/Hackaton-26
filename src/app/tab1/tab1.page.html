@@ -1,163 +1,70 @@
-        <ion-header [translucent]="true" class="main-header">
-          <ion-toolbar>
-            <ion-title (click)="onTitleClick()" [class.debug-active]="isDebugMode()">Galerie</ion-title>
-      <ion-buttons slot="end">
-        <ion-button (click)="toggleSelectionMode()" class="header-btn" [color]="selectionMode ? 'danger' : 'primary'">
-          <ion-icon [name]="selectionMode ? 'checkmark' : 'menu'" size="large"></ion-icon>
-        </ion-button>
-        <ion-button color="danger" [disabled]="!selectionMode || !selectedFilepaths.size" (click)="deleteSelected()" class="header-btn">
-          <ion-icon name="trash" size="large"></ion-icon>
-        </ion-button>
-      </ion-buttons>
-    </ion-toolbar>
-  </ion-header>
+<ion-header [translucent]="true" class="main-header" [class.debug-active]="isDebugMode()" [class.visible]="headerVisible">
+  <ion-toolbar>
+    <ion-title (click)="onTitleClick()" [class.debug-active]="isDebugMode()">Galerie</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleSelectionMode()" class="header-btn" [color]="galleryService.selectionMode ? 'danger' : 'primary'">
+        <ion-icon [name]="galleryService.selectionMode ? 'checkmark' : 'menu'" size="large"></ion-icon>
+      </ion-button>
+      <ion-button color="danger" [disabled]="!galleryService.selectionMode || !hasSelectedPhotos()" (click)="deleteSelected()" class="header-btn">
+        <ion-icon name="trash" size="large"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" (ionScroll)="onScroll($event)" (scroll)="onScroll($event)">
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-title size="large">Galerie</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <ion-grid *ngIf="photoService.photos.length; else emptyState">
-    <ion-row>
-      <ion-col size="6" *ngFor="let photo of photoService.photos; index as position" 
-               (click)="selectionMode ? toggleSelect(photo.filepath) : openViewer(position)"
-               (longpress)="!selectionMode && enterSelectionMode(photo.filepath)">
-        <div class="photo-tile">
-          <ion-img [src]="photo.webviewPath" [class.dimmed]="selectionMode && !isSelected(photo.filepath)"></ion-img>
-          <ion-checkbox *ngIf="selectionMode" style="position: absolute; top: 8px; right: 8px;"
-            [checked]="isSelected(photo.filepath)"></ion-checkbox>
-          <ion-button *ngIf="!selectionMode" fill="clear" class="like-btn" (click)="toggleLike(photo.filepath, $event)">
-            <ion-icon [name]="isLiked(photo.filepath) ? 'heart' : 'heart-outline'" 
-                      [color]="isLiked(photo.filepath) ? 'danger' : 'light'"></ion-icon>
-          </ion-button>
-        </div>
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+  <app-photo-grid
+    [photos]="photoService.photos"
+    [selectionMode]="galleryService.selectionMode"
+    [selectedFilepaths]="galleryService.selectedFilepaths"
+    [likedFilepaths]="photoService.getLikedFilepaths()"
+    (photoClick)="openViewer($event)"
+    (photoLongPress)="enterSelectionMode($event)"
+    (toggleSelect)="toggleSelect($event)"
+    (toggleLike)="toggleLike($event.filepath, $event.event)">
+  </app-photo-grid>
 
-  <ng-template #emptyState>
-    <div style="padding: 16px; text-align: center; opacity: 0.7;">Aucune photo pour le moment</div>
-  </ng-template>
+  <ion-fab vertical="bottom" horizontal="center" slot="fixed">
+    <ion-fab-button (click)="addPhotoToGallery()">
+      <ion-icon name="camera"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
 
-        <ion-fab vertical="bottom" horizontal="center" slot="fixed">
-          <ion-fab-button (click)="addPhotoToGallery()">
-            <ion-icon name="camera"></ion-icon>
-          </ion-fab-button>
-        </ion-fab>
-
-
-  <!-- Fullscreen viewer modal -->
-  <ion-modal [isOpen]="viewerOpen" (didDismiss)="closeViewer()">
-    <ng-template>
-        <div class="viewer" 
-             (click)="onViewerClick($event)"
-             (touchstart)="onVerticalTouchStart($event)"
-             (touchmove)="onVerticalTouchMove($event)"
-             (touchend)="onVerticalTouchEnd($event)">
-        
-        <div class="viewer-header" [class.hidden]="!viewerControlsVisible">
-          <ion-button fill="clear" color="light" (click)="closeViewer()" class="viewer-btn">
-            <ion-icon name="arrow-back" size="large"></ion-icon>
-          </ion-button>
-          <div class="viewer-actions">
-            <ion-button fill="clear" color="light" (click)="toggleLike(photoService.photos[currentIndex]?.filepath || '')" class="viewer-btn">
-              <ion-icon [name]="isLiked(photoService.photos[currentIndex]?.filepath || '') ? 'heart' : 'heart-outline'" 
-                        [color]="isLiked(photoService.photos[currentIndex]?.filepath || '') ? 'danger' : 'light'" size="large"></ion-icon>
-            </ion-button>
-            <ion-button fill="clear" color="danger" (click)="deleteCurrentPhoto()" class="viewer-btn">
-              <ion-icon name="trash" size="large"></ion-icon>
-            </ion-button>
-          </div>
-        </div>
-
-        <div class="viewer-content" 
-             (swipeleft)="canSwipeLeft() && nextPhoto()" 
-             (swiperight)="canSwipeRight() && prevPhoto()"
-             (touchstart)="onTouchStart($event)"
-             (touchmove)="onTouchMove($event)"
-             (touchend)="onTouchEnd($event)"
-             [style.transform]="'translateY(' + verticalOffset + 'px)'"
-             [style.transition]="verticalTransition">
-          <img [src]="photoService.photos[currentIndex]?.webviewPath" 
-               [style.transform]="'translateX(' + swipeOffset + 'px)'"
-               [style.transition]="swipeTransition" />
-        </div>
-
-        <div class="viewer-footer" [class.hidden]="!viewerControlsVisible">
-          <span class="photo-counter">{{ currentIndex + 1 }} / {{ photoService.photos.length }}</span>
-        </div>
-
-        <!-- Metadata panel that slides up -->
-        <div class="metadata-panel" 
-             [class.visible]="metadataVisible"
-             [style.transform]="'translateY(' + metadataOffset + 'px)'"
-             [style.transition]="metadataTransition"
-             (touchstart)="onMetadataTouchStart($event)"
-             (touchmove)="onMetadataTouchMove($event)"
-             (touchend)="onMetadataTouchEnd($event)">
-          <div class="metadata-header">
-            <div class="metadata-handle"></div>
-          </div>
-          <div class="metadata-content" *ngIf="photoService.photos[currentIndex]">
-            <div class="metadata-section">
-              <h3>Informations</h3>
-              <div class="metadata-item">
-                <ion-icon name="calendar"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Date de prise</span>
-                  <span class="value">{{ getPhotoDate(photoService.photos[currentIndex]?.filepath || '') }}</span>
-                </div>
-              </div>
-              <div class="metadata-item">
-                <ion-icon name="heart" [color]="isLiked(photoService.photos[currentIndex]?.filepath || '') ? 'danger' : 'medium'"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Statut</span>
-                  <span class="value">{{ isLiked(photoService.photos[currentIndex]?.filepath || '') ? 'Aimée' : 'Non aimée' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="metadata-section">
-              <h3>Appareil</h3>
-              <div class="metadata-item">
-                <ion-icon name="camera"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Appareil</span>
-                  <span class="value">{{ getDeviceModel(photoService.photos[currentIndex]?.metadata) }}</span>
-                </div>
-              </div>
-              <div class="metadata-item" *ngIf="getPhotoResolution(photoService.photos[currentIndex]?.metadata)">
-                <ion-icon name="settings"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Résolution</span>
-                  <span class="value">{{ getPhotoResolution(photoService.photos[currentIndex]?.metadata) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="metadata-section" *ngIf="hasLocationData(photoService.photos[currentIndex]?.metadata)">
-              <h3>Localisation</h3>
-              <div class="metadata-item">
-                <ion-icon name="location"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Coordonnées GPS</span>
-                  <span class="value">{{ getGPSCoordinates(photoService.photos[currentIndex]?.metadata) }}</span>
-                </div>
-              </div>
-              <div class="metadata-item" *ngIf="getAltitude(photoService.photos[currentIndex]?.metadata)">
-                <ion-icon name="arrow-up"></ion-icon>
-                <div class="metadata-text">
-                  <span class="label">Altitude</span>
-                  <span class="value">{{ getAltitude(photoService.photos[currentIndex]?.metadata) }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
+  <app-photo-viewer
+    [isOpen]="viewerService.viewerOpen"
+    [currentIndex]="viewerService.currentIndex"
+    [photos]="photoService.photos"
+    [viewerControlsVisible]="viewerService.viewerControlsVisible"
+    [swipeOffset]="viewerService.swipeOffset"
+    [swipeTransition]="viewerService.swipeTransition"
+    [verticalOffset]="viewerService.verticalOffset"
+    [verticalTransition]="viewerService.verticalTransition"
+    [metadataVisible]="viewerService.metadataVisible"
+    [metadataOffset]="viewerService.metadataOffset"
+    [metadataTransition]="viewerService.metadataTransition"
+    [likedFilepaths]="photoService.getLikedFilepaths()"
+    (close)="closeViewer()"
+    (nextPhoto)="nextPhoto()"
+    (prevPhoto)="prevPhoto()"
+    (canSwipeLeft)="canSwipeLeft()"
+    (canSwipeRight)="canSwipeRight()"
+    (viewerClick)="onViewerClick($event)"
+    (touchStart)="onTouchStart($event)"
+    (touchMove)="onTouchMove($event)"
+    (touchEnd)="onTouchEnd($event)"
+    (verticalTouchStart)="onVerticalTouchStart($event)"
+    (verticalTouchMove)="onVerticalTouchMove($event)"
+    (verticalTouchEnd)="onVerticalTouchEnd($event)"
+    (metadataTouchStart)="onMetadataTouchStart($event)"
+    (metadataTouchMove)="onMetadataTouchMove($event)"
+    (metadataTouchEnd)="onMetadataTouchEnd($event)"
+    (toggleLike)="toggleLike($event)"
+    (deleteCurrent)="deleteCurrentPhoto()">
+  </app-photo-viewer>
 </ion-content>
