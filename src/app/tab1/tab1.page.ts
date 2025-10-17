@@ -138,17 +138,6 @@ export class Tab1Page implements OnInit, OnDestroy, ViewWillEnter {
     this.viewerService.onTouchEnd(event);
   }
 
-  onVerticalTouchStart(event: TouchEvent): void {
-    this.viewerService.onVerticalTouchStart(event);
-  }
-
-  onVerticalTouchMove(event: TouchEvent): void {
-    this.viewerService.onVerticalTouchMove(event);
-  }
-
-  onVerticalTouchEnd(event: TouchEvent): void {
-    this.viewerService.onVerticalTouchEnd(event);
-  }
 
   onMetadataTouchStart(event: TouchEvent): void {
     this.viewerService.onMetadataTouchStart(event);

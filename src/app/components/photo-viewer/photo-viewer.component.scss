@@ -19,6 +19,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px;
+  padding-top: calc(env(safe-area-inset-top) + 20px); /* Account for iPhone notch */
   background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
   transition: opacity 0.3s ease;
 }
@@ -127,6 +128,7 @@
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   max-height: 50vh;
+  touch-action: pan-y; /* Allow vertical scrolling inside metadata content */
 }
 
 .metadata-header {

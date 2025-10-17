@@ -93,6 +93,10 @@ export class ViewerService {
     this.touchStartX = event.touches[0].clientX;
     this.touchStartY = event.touches[0].clientY;
     this.isSwipeGesture = false;
+    
+    // Also initialize vertical touch for metadata
+    this.verticalTouchStartY = event.touches[0].clientY;
+    this.isVerticalGesture = false;
   }
 
   onTouchMove(event: TouchEvent): void {
@@ -109,67 +113,57 @@ export class ViewerService {
       this.swipeOffset = -diffX;
       this.swipeTransition = 'none';
     }
+    // Check for vertical gesture for metadata
+    else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 10) {
+      // Only detect vertical gesture if metadata is not visible or if scrolling up from outside
+      if (!this.metadataVisible || diffY < 0) {
+        this.isVerticalGesture = true;
+        this.verticalOffset = 0; // Keep image centered, don't move it
+        this.verticalTransition = 'none';
+      }
+    }
   }
 
   onTouchEnd(event: TouchEvent): void {
-    if (!this.isSwipeGesture) return;
+    if (this.isSwipeGesture) {
+      const diffX = this.touchStartX - event.changedTouches[0].clientX;
+      const threshold = 50;
 
-    const diffX = this.touchStartX - event.changedTouches[0].clientX;
-    const threshold = 50;
+      if (Math.abs(diffX) > threshold) {
+        if (diffX > 0 && this.canSwipeLeft()) {
+          this.nextPhoto();
+        } else if (diffX < 0 && this.canSwipeRight()) {
+          this.prevPhoto();
+        }
+      }
 
-    if (Math.abs(diffX) > threshold) {
-      if (diffX > 0 && this.canSwipeLeft()) {
-        this.nextPhoto();
-      } else if (diffX < 0 && this.canSwipeRight()) {
-        this.prevPhoto();
+      this.swipeOffset = 0;
+      this.swipeTransition = 'transform 0.3s ease-out';
+      setTimeout(() => {
+        this.swipeTransition = 'none';
+      }, 300);
+    }
+    
+    // Handle vertical gesture for metadata
+    if (this.isVerticalGesture) {
+      const diffY = this.verticalTouchStartY - event.changedTouches[0].clientY;
+      const threshold = 100;
+
+      // Only show/hide metadata if scrolling up from outside the metadata panel
+      if (!this.metadataVisible && diffY > threshold) {
+        this.showMetadata();
+      } else if (this.metadataVisible && diffY < -threshold) {
+        this.hideMetadata();
       }
     }
-
-    this.swipeOffset = 0;
-    this.swipeTransition = 'transform 0.3s ease-out';
-    setTimeout(() => {
-      this.swipeTransition = 'none';
-    }, 300);
 
     this.touchStartX = 0;
     this.touchStartY = 0;
     this.isSwipeGesture = false;
-  }
-
-  // Vertical touch handling for metadata
-  onVerticalTouchStart(event: TouchEvent): void {
-    this.verticalTouchStartY = event.touches[0].clientY;
-    this.isVerticalGesture = false;
-  }
-
-  onVerticalTouchMove(event: TouchEvent): void {
-    if (!this.verticalTouchStartY) return;
-
-    const currentY = event.touches[0].clientY;
-    const diffY = this.verticalTouchStartY - currentY;
-
-    if (Math.abs(diffY) > 10) {
-      this.isVerticalGesture = true;
-      this.verticalOffset = 0; // Keep image centered, don't move it
-      this.verticalTransition = 'none';
-    }
-  }
-
-  onVerticalTouchEnd(event: TouchEvent): void {
-    if (!this.isVerticalGesture) return;
-
-    const diffY = this.verticalTouchStartY - event.changedTouches[0].clientY;
-    const threshold = 100;
-
-    if (diffY > threshold) {
-      this.showMetadata();
-    } else {
-      this.hideMetadata();
-    }
-
     this.verticalTouchStartY = 0;
     this.isVerticalGesture = false;
   }
+
 
   // Metadata panel methods
   showMetadata(): void {
@@ -199,11 +193,16 @@ export class ViewerService {
 
     const currentY = event.touches[0].clientY;
     const diffY = this.metadataScrollStartY - currentY;
+    const target = event.target as HTMLElement;
 
-    if (Math.abs(diffY) > 10) {
+    // Check if we're touching the metadata handle or header
+    const isHandle = target.closest('.metadata-handle') || target.closest('.metadata-header');
+    
+    if (isHandle && Math.abs(diffY) > 10) {
       this.isMetadataScrollGesture = true;
       this.metadataOffset = Math.max(0, diffY);
       this.metadataTransition = 'none';
+      event.preventDefault(); // Prevent default scrolling
     }
   }
 

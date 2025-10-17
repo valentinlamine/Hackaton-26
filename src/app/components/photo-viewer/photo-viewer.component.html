@@ -1,10 +1,7 @@
 <ion-modal [isOpen]="isOpen" (didDismiss)="onClose()">
   <ng-template>
     <div class="viewer" 
-         (click)="onViewerClick($event)"
-         (touchstart)="onVerticalTouchStart($event)"
-         (touchmove)="onVerticalTouchMove($event)"
-         (touchend)="onVerticalTouchEnd($event)">
+         (click)="onViewerClick($event)">
       
       <div class="viewer-header" [class.hidden]="!viewerControlsVisible">
         <ion-button fill="clear" color="light" (click)="onClose()" class="viewer-btn">
