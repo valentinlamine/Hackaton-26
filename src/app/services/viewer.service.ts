@@ -82,10 +82,10 @@ export class ViewerService {
 
   private resetSwipeState(): void {
     this.swipeOffset = 0;
-    this.swipeTransition = 'transform 0.3s ease-out';
+    this.swipeTransition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     setTimeout(() => {
       this.swipeTransition = 'none';
-    }, 300);
+    }, 400);
   }
 
   // Touch handling for swipe
@@ -138,10 +138,10 @@ export class ViewerService {
       }
 
       this.swipeOffset = 0;
-      this.swipeTransition = 'transform 0.3s ease-out';
+      this.swipeTransition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
       setTimeout(() => {
         this.swipeTransition = 'none';
-      }, 300);
+      }, 400);
     }
     
     // Handle vertical gesture for metadata
@@ -170,16 +170,16 @@ export class ViewerService {
     this.metadataVisible = true;
     this.metadataOffset = 0;
     this.verticalOffset = 0; // Keep image centered
-    this.verticalTransition = 'transform 0.3s ease-out';
-    this.metadataTransition = 'transform 0.3s ease-out';
+    this.verticalTransition = 'transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+    this.metadataTransition = 'transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
   }
 
   hideMetadata(): void {
     this.metadataVisible = false;
     this.metadataOffset = 100; // Slide down to hide
     this.verticalOffset = 0; // Keep image centered
-    this.verticalTransition = 'transform 0.3s ease-out';
-    this.metadataTransition = 'transform 0.3s ease-out';
+    this.verticalTransition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    this.metadataTransition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
   }
 
   // Metadata touch handling
@@ -204,6 +204,13 @@ export class ViewerService {
       this.metadataTransition = 'none';
       event.preventDefault(); // Prevent default scrolling
     }
+    // Also allow dragging from anywhere in the metadata header area
+    else if (target.closest('.metadata-header') && Math.abs(diffY) > 10) {
+      this.isMetadataScrollGesture = true;
+      this.metadataOffset = Math.max(0, diffY);
+      this.metadataTransition = 'none';
+      event.preventDefault(); // Prevent default scrolling
+    }
   }
 
   onMetadataTouchEnd(event: TouchEvent): void {
@@ -215,7 +222,9 @@ export class ViewerService {
     if (diffY > threshold) {
       this.hideMetadata();
     } else {
-      this.showMetadata();
+      // Snap back to original position with bouncy animation
+      this.metadataOffset = 0;
+      this.metadataTransition = 'transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
     }
 
     this.metadataScrollStartY = 0;
